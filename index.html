@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stanley Liu</title>
+<meta name="description" content="Stanley Liu, Informatics student at UC Irvine. Projects: a real-time TETR.IO bot in Python and quizfree, a framework-free flashcard web app.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112..125,500..800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one 46rem reading column; the hero pairs the name with a Tetris well, sections are ruled rows like a playfield's lines. */
+:root {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --fg: #16191f;
+  --muted: #5a6170;
+  --line: #d9dde4;
+  --accent: #3554d1;          /* J-piece blue */
+  --accent-ink: #ffffff;
+  --cell-empty: #e7eaef;
+  --cell-grid: #f5f6f8;
+  /* tetromino hues, muted for paper */
+  --p-i: #2fa9c4; --p-o: #d9a91c; --p-t: #8a4fc2; --p-s: #3f9d4f;
+  --p-z: #cf4b45; --p-j: #3554d1; --p-l: #df7a2a;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step-0: 1rem; --step-1: 1.2rem; --step-2: 1.6rem; --step-3: clamp(2.4rem, 7vw, 3.9rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101318; --surface: #171b22; --fg: #e8ebf0; --muted: #9aa3b2; --line: #2a303b;
+    --accent: #7d95ff; --accent-ink: #0e1220; --cell-empty: #1d222b; --cell-grid: #101318;
+    --p-i: #49c3dc; --p-o: #e8bf3c; --p-t: #a876e0; --p-s: #5cbc6c;
+    --p-z: #e46a63; --p-j: #7d95ff; --p-l: #f0954d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101318; --surface: #171b22; --fg: #e8ebf0; --muted: #9aa3b2; --line: #2a303b;
+  --accent: #7d95ff; --accent-ink: #0e1220; --cell-empty: #1d222b; --cell-grid: #101318;
+  --p-i: #49c3dc; --p-o: #e8bf3c; --p-t: #a876e0; --p-s: #5cbc6c;
+  --p-z: #e46a63; --p-j: #7d95ff; --p-l: #f0954d;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 400 var(--step-0)/1.6 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 46rem; margin: 0 auto; padding-block: clamp(2rem, 6vw, 4.5rem) 3rem; display: grid; gap: 3.25rem; }
+a { color: var(--accent); text-underline-offset: 3px; text-decoration-thickness: 1px; }
+a:hover { text-decoration-thickness: 2px; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+p { margin: 0; }
+
+/* hero */
+.hero { display: grid; grid-template-columns: 1fr auto; gap: 2rem; align-items: end; }
+.hero > * { min-width: 0; }
+.kicker { font: 500 0.78rem/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-size: var(--step-3); font-weight: 800; font-stretch: 125%; line-height: 0.95; letter-spacing: -0.02em; margin-block: 0.6rem 1rem; }
+.lede { font-size: var(--step-1); max-width: 34ch; }
+.lede strong { font-weight: 600; }
+.links { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin-top: 1.25rem; font: 500 0.92rem/1.4 var(--font-mono); }
+
+.well { display: grid; grid-template-columns: repeat(10, 14px); grid-auto-rows: 14px; gap: 2px; padding: 6px; background: var(--cell-grid); border: 1px solid var(--line); border-radius: 4px; }
+.well span { background: var(--cell-empty); border-radius: 2px; }
+.well span[data-p] { box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.14); }
+.well span[data-p="I"] { background: var(--p-i); } .well span[data-p="O"] { background: var(--p-o); }
+.well span[data-p="T"] { background: var(--p-t); } .well span[data-p="S"] { background: var(--p-s); }
+.well span[data-p="Z"] { background: var(--p-z); } .well span[data-p="J"] { background: var(--p-j); }
+.well span[data-p="L"] { background: var(--p-l); }
+.well .fall { animation: drop 900ms cubic-bezier(.5,0,.75,0) 300ms both; }
+@keyframes drop { from { transform: translateY(-64px); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .well .fall { animation: none; } }
+
+/* sections */
+section { display: grid; gap: 1.25rem; }
+.sec-head { border-bottom: 1px solid var(--line); padding-bottom: 0.5rem; }
+h2 { font-size: 0.82rem; font-weight: 700; font-stretch: 112%; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+
+.project { display: grid; gap: 0.9rem; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: clamp(1.1rem, 3vw, 1.6rem); }
+.project-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.25rem 1rem; align-items: baseline; }
+h3 { font-size: var(--step-2); font-weight: 700; font-stretch: 118%; letter-spacing: -0.01em; }
+.stack { font: 400 0.85rem/1.4 var(--font-mono); color: var(--muted); }
+.project p { max-width: 62ch; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: 0.75rem; margin: 0.25rem 0; padding: 0; list-style: none; }
+.stats li { border-left: 3px solid var(--accent); padding-left: 0.7rem; display: grid; }
+.stats b { font: 600 var(--step-2)/1.1 var(--font-display); font-stretch: 112%; font-variant-numeric: tabular-nums; }
+.stats span { font-size: 0.82rem; color: var(--muted); line-height: 1.35; }
+.project ul.points { margin: 0; padding-left: 1.1rem; display: grid; gap: 0.35rem; max-width: 62ch; }
+.project-links { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; font: 500 0.9rem/1.4 var(--font-mono); }
+
+.rows { display: grid; gap: 1.1rem; }
+.row { display: grid; grid-template-columns: 7.5rem 1fr; gap: 0.25rem 1.25rem; }
+.row > * { min-width: 0; }
+.when { font: 400 0.85rem/1.6 var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.row h4 { margin: 0; font: 600 1rem/1.4 var(--font-body); }
+.row .where { color: var(--muted); font-size: 0.92rem; }
+.row p { max-width: 58ch; margin-top: 0.2rem; }
+
+.skills { display: grid; gap: 0.6rem; margin: 0; }
+.skills div { display: grid; grid-template-columns: 7.5rem 1fr; gap: 1.25rem; }
+.skills dt { font: 500 0.85rem/1.6 var(--font-mono); color: var(--muted); }
+.skills dd { margin: 0; min-width: 0; }
+
+.contact { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+.email { font: 500 1rem/1.4 var(--font-mono); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 0.55rem 0.8rem; user-select: all; overflow-wrap: anywhere; }
+button.copy { font: 600 0.9rem/1 var(--font-body); background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 6px; padding: 0.7rem 1rem; cursor: pointer; }
+footer { color: var(--muted); font-size: 0.82rem; border-top: 1px solid var(--line); padding-top: 1rem; }
+
+@media (max-width: 560px) {
+  .hero { grid-template-columns: 1fr; }
+  .well { grid-template-columns: repeat(10, 11px); grid-auto-rows: 11px; justify-self: start; }
+  .row, .skills div { grid-template-columns: 1fr; gap: 0.1rem; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div>
+      <p class="kicker">Informatics · UC Irvine · Class of 2029</p>
+      <h1>Stanley<br>Liu</h1>
+      <p class="lede">I build and test complete pieces of software: a <strong>real-time game AI in Python</strong> and a <strong>flashcard app people use in the browser</strong>. Looking for a Summer 2027 software engineering or product internship.</p>
+      <nav class="links" aria-label="Profiles">
+        <a href="Stanley_Liu_Portfolio.pdf" target="_blank" rel="noopener">Portfolio (PDF)</a>
+        <a href="https://github.com/3tanley" target="_blank" rel="noopener">github.com/3tanley</a>
+        <a href="https://www.linkedin.com/in/stanley-y-liu" target="_blank" rel="noopener">linkedin.com/in/stanley-y-liu</a>
+      </nav>
+    </div>
+    <div class="well" id="well" aria-hidden="true"></div>
+  </header>
+
+  <section aria-labelledby="projects">
+    <div class="sec-head"><h2 id="projects">Projects</h2></div>
+
+    <article class="project">
+      <div class="project-top">
+        <h3>TETR.IO Bot</h3>
+        <span class="stack">Python · numpy · Pillow · pytest · 2026</span>
+      </div>
+      <p>A macOS bot that plays TETR.IO by reading the screen in real time, plus a coaching mode that watches a human play and shows where the next piece should go without pressing a key.</p>
+      <ul class="stats">
+        <li><b>~10 ms</b><span>to score ~1,000 board positions per move</span></li>
+        <li><b>5</b><span>search algorithms working together</span></li>
+        <li><b>5,081</b><span>opener and perfect-clear setups encoded</span></li>
+        <li><b>92</b><span>tests, incl. a simulator and a fake game screen</span></li>
+      </ul>
+      <ul class="points">
+        <li>Weighs about 23 candidate placements per piece, including tucks, spins and SRS+ wall kicks, using a cheapest-key-path move generator, a backtracking setup solver, a time-limited perfect-clear solver, a beam search and a heuristic with lookahead.</li>
+        <li>Coaching mode recognizes which setup a player is building by elimination against the setup library, ranked by a prior learned from self-play.</li>
+        <li>About 11,200 lines of Python, written with Claude Code and GitHub Copilot while I owned the architecture and design decisions.</li>
+      </ul>
+      <div class="project-links">
+        <a href="https://github.com/3tanley/tetris-project" target="_blank" rel="noopener">Source on GitHub</a>
+      </div>
+    </article>
+
+    <article class="project">
+      <div class="project-top">
+        <h3>quizfree</h3>
+        <span class="stack">JavaScript · HTML · CSS · 2026</span>
+      </div>
+      <p>A free flashcard app with a terminal-style interface. No account, no server, no build step: three static files hosted on GitHub Pages.</p>
+      <ul class="points">
+        <li>Flashcards, a learn mode (multiple choice, then typed answers, with mastery tracking) and a graded test mode with matching, multiple-choice and written questions.</li>
+        <li>Validated JSON import and export with a 5 MB cap, automatic per-set progress saving, keyboard shortcuts, a command line, and a bookmarklet that copies Quizlet sets.</li>
+        <li>About 1,250 lines of vanilla JavaScript, HTML and CSS, with a 9-test suite on Node's built-in test runner.</li>
+      </ul>
+      <div class="project-links">
+        <a href="https://3tanley.github.io/quizfree/" target="_blank" rel="noopener">Try it live</a>
+        <a href="https://github.com/3tanley/quizfree" target="_blank" rel="noopener">Source on GitHub</a>
+      </div>
+    </article>
+  </section>
+
+  <section aria-labelledby="experience">
+    <div class="sec-head"><h2 id="experience">Experience</h2></div>
+    <div class="rows">
+      <div class="row">
+        <span class="when">2025 – 2026</span>
+        <div>
+          <h4>Counselor Lead</h4>
+          <span class="where">Stanford Camp Cardinal · Stanford, CA</span>
+          <p>Oversaw 40 counselors and coordinated rotations for 130+ campers ages 5–12; provided translation support.</p>
+        </div>
+      </div>
+      <div class="row">
+        <span class="when">2021 – 2023</span>
+        <div>
+          <h4>Web Designer</h4>
+          <span class="where">Pittsburgh Chinese Cultural Center · Pittsburgh, PA</span>
+          <p>Developed the official website, its core templates and content architecture. It reached 10K+ users in 3 years.</p>
+        </div>
+      </div>
+      <div class="row">
+        <span class="when">2025 – 2026</span>
+        <div>
+          <h4>Captain, Water Polo</h4>
+          <span class="where">Saratoga High School</span>
+          <p>Helped lead the team to the upper division for the first time in four years. Most Inspirational Player.</p>
+        </div>
+      </div>
+      <div class="row">
+        <span class="when">2025 – 2026</span>
+        <div>
+          <h4>Brass Captain, Marching Band</h4>
+          <span class="where">Saratoga High School</span>
+          <p>Ran weekly sectionals; the band took first place in visual performance at multiple competitions.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="education">
+    <div class="sec-head"><h2 id="education">Education &amp; skills</h2></div>
+    <div class="rows">
+      <div class="row">
+        <span class="when">2026 – 2029</span>
+        <div>
+          <h4>B.S. Informatics, in progress</h4>
+          <span class="where">UC Irvine, Donald Bren School of Information and Computer Sciences · expected June 2029</span>
+          <p>Fall 2026: Python Programming and Libraries (Accelerated), Boolean Logic and Discrete Structures.</p>
+        </div>
+      </div>
+    </div>
+    <dl class="skills">
+      <div><dt>Languages</dt><dd>Python, JavaScript, HTML, CSS; also C/C++, Java</dd></div>
+      <div><dt>Tools</dt><dd>Git, VS Code, PyCharm, Claude Code, GitHub Copilot, pytest</dd></div>
+      <div><dt>Speaks</dt><dd>English (native), Mandarin (fluent, spoken)</dd></div>
+    </dl>
+  </section>
+
+  <section aria-labelledby="contact">
+    <div class="sec-head"><h2 id="contact">Contact</h2></div>
+    <div class="contact">
+      <span class="email" id="email">stanleyliu1700@gmail.com</span>
+      <button class="copy" id="copy" type="button">Copy email</button>
+    </div>
+  </section>
+
+  <footer>© 2026 Stanley Liu</footer>
+</div>
+
+<script>
+  // 10 x 8 well: a stack in progress; the T piece drops in on load.
+  const rows = [
+    "..........",
+    "..........",
+    "....TTT...",
+    ".....T....",
+    "JJ......OO",
+    "JLLL.SS.OO",
+    "JLIIIISZZZ",
+    "LLSSZZIIIZ"
+  ];
+  const fall = new Set(["2,4", "2,5", "2,6", "3,5"]);
+  const well = document.getElementById("well");
+  rows.forEach((row, r) => [...row].forEach((ch, c) => {
+    const cell = document.createElement("span");
+    if (ch !== ".") cell.dataset.p = ch;
+    if (fall.has(r + "," + c)) cell.className = "fall";
+    well.appendChild(cell);
+  }));
+
+  const btn = document.getElementById("copy");
+  btn.addEventListener("click", async () => {
+    const email = document.getElementById("email");
+    try {
+      await navigator.clipboard.writeText(email.textContent);
+      btn.textContent = "Copied";
+    } catch {
+      const range = document.createRange();
+      range.selectNodeContents(email);
+      const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+      btn.textContent = "Selected, press Ctrl/⌘+C";
+    }
+    setTimeout(() => { btn.textContent = "Copy email"; }, 2200);
+  });
+</script>
+</body>
+</html>
