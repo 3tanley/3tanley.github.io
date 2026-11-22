@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Stanley Liu</title>
-<meta name="description" content="Stanley Liu, Informatics student at UC Irvine. Projects: a real-time TETR.IO bot in Python and quizfree, a framework-free flashcard web app.">
+<meta name="description" content="Stanley Liu, Informatics student at UC Irvine. Projects: a real-time TETR.IO bot in Python, quizfree, a framework-free flashcard web app, and a Fate/Grand Order team finder in Dart.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112..125,500..800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -176,6 +176,28 @@ footer { color: var(--muted); font-size: 0.82rem; border-top: 1px solid var(--li
       <div class="project-links">
         <a href="https://3tanley.github.io/quizfree/" target="_blank" rel="noopener">Try it live</a>
         <a href="https://github.com/3tanley/quizfree" target="_blank" rel="noopener">Source on GitHub</a>
+      </div>
+    </article>
+
+    <article class="project">
+      <div class="project-top">
+        <h3>FGO Team Finder</h3>
+        <span class="stack">Dart · Flutter · 2026</span>
+      </div>
+      <p>A feature added to a fork of the open-source Chaldea app for Fate/Grand Order. Given the servants a player owns and a quest, it searches for teams that clear the quest in 3 turns, using the app's own battle engine to try skill order, targets, NP order and mystic-code swaps.</p>
+      <ul class="stats">
+        <li><b>5,169</b><span>candidate teams from a 24-servant box</span></li>
+        <li><b>top 3%</b><span>where the ranking puts the known clearing lineups</span></li>
+        <li><b>0 → 7</b><span>clears found in the same 6 minutes after the new ranking</span></li>
+        <li><b>194</b><span>tests, plus a battle-engine search over real game data</span></li>
+      </ul>
+      <ul class="points">
+        <li>Ranks every team by estimated NP damage (ATK, class rate, card type, trait bonuses and stacked buffs) so the likeliest teams are searched first, then spends more search on the best-ranked ones under a 10-minute budget.</li>
+        <li>Warns before a long search, shows the full team with each craft essence and the mystic code, and retries a clear with drop-only craft essences when it overkills the quest.</li>
+        <li>About 3,000 lines of Dart and 3,000 lines of tests, written with Claude Code while I owned the design decisions. It does not yet find every clear: one known team needs about 500 search turns and is not reached.</li>
+      </ul>
+      <div class="project-links">
+        <a href="https://github.com/3tanley/fgo-team-finder" target="_blank" rel="noopener">Source on GitHub (fork of chaldea-center/chaldea)</a>
       </div>
     </article>
   </section>
